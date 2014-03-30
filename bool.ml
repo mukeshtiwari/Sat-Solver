@@ -72,3 +72,34 @@ let rec nnf = function
   | Or qs -> Or ( List.map nnf qs )
   | And qs -> And ( List.map nnf qs )
 
+let cnf p =
+  let rec convert cs = function
+    | True -> cs
+    | False -> [ Clause [] ]
+    | Var x -> ( Clause [ Lit x ] ) :: cs 
+    | Not ( Var x ) -> ( Clause [ Til x ] ) :: cs 
+    | Not _ -> assert false
+    | And ps -> List.fold_left convert cs ps
+    | Or [] -> [ Clause [] ]
+    | Or [p] -> convert cs p
+    | Or ( p :: ps ) -> 
+       let ds = convert [] p in 
+       let es = convert [] ( Or ps ) in 
+          List.fold_left 
+	    ( fun cs ( Clause d ) -> 
+	       List.fold_left ( fun cs ( Clause e ) -> ( Clause ( d @ e ) ) :: cs ) cs es )
+	    cs ds
+  in
+    CNF ( convert [] ( nnf p ))
+
+
+let var_cnf ( CNF cs ) = 
+  List.fold_left ( fun xs ( Clause c ) -> 
+		   List.fold_left 
+		     ( fun xs l ->
+		         match l with 
+			 | Lit x -> x :: xs 
+			 | Til x -> x :: xs )
+		     xs c )
+		 [] cs
+					   
